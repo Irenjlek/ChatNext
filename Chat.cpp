@@ -57,18 +57,18 @@ void Chat::write(std::string text, std::shared_ptr<User> recipient)
 {
 	std::shared_ptr <Message> shp_mess = std::make_shared<Message>(text, getActiveUser()->getLogin(),
 		                                           recipient->getLogin());
-	getActiveUser()->addMessage(shp_mess);	
+	recipient->addMessage(shp_mess);
 }
 
 void Chat::writeToAll(const std::string text)
 {
-	for (auto& recipient : _users)
+	for (std::map<int, std::shared_ptr<User>>::iterator it = _users.begin(); it != _users.end(); ++it)
 	{
-		if (recipient.second->getLogin() != getActiveUser()->getLogin())
+		if (it->second->getLogin() != getActiveUser()->getLogin())
 		{
 			std::shared_ptr <Message> shp_mess = std::make_shared<Message>(text, getActiveUser()->getLogin(),
-				                                         recipient.second->getLogin());
-			recipient.second->addMessage(shp_mess);
+				                                         it->second->getLogin());
+			it->second->addMessage(shp_mess);
 		}
 	}
 }
@@ -95,9 +95,9 @@ void Chat::showMenuAddMessege()
 
 std::shared_ptr<User> Chat::getUser(const std::string login)
 {
-	for (auto& user : _users)
-		if (user.second->getLogin() == login)				
-			return user.second;    
+	for (std::map<int, std::shared_ptr<User>>::iterator it = _users.begin(); it != _users.end(); ++it)
+		if (it->second->getLogin() == login)				
+			return it->second;    
 		
 		return std::make_shared <User>();
 }

@@ -21,7 +21,7 @@ void User::showUnreadedMessages()
 				<< "--->" << std::setw(30)
 				<< msg->getRecipient() << std::endl << std::endl << std::setw(20) << "\" "
 				<< msg->getText() << " \""
-				<< std::endl << std::endl;
+				<< std::endl << std::endl;		
 			_messages.pop();
 		}
 	}
