@@ -123,10 +123,8 @@ bool selectAction(std::shared_ptr<Chat> chat) {
 			std::cout << std::endl;
 
 			chat->write(message, chat->getUser(log_recipient));
-			time_t result = time(NULL);
-			char str[26];
-			ctime_s(str, sizeof str, &result);
-			std::cout << chat->getActiveUser()->getName() << std::setw(35) << str << std::setw(30)
+			std::time_t now = std::time(nullptr);
+			std::cout << chat->getActiveUser()->getName() << std::setw(35) << std::asctime(std::localtime(&now)) << std::setw(30)
 				<< "--->" << std::setw(30)
 				<< chat->getNameByLogin(log_recipient) << std::endl << std::endl << std::setw(15) << "\" " << message << " \""
 				<< std::endl << std::endl;
@@ -140,10 +138,8 @@ bool selectAction(std::shared_ptr<Chat> chat) {
 			std::getline(std::cin, message);
 			chat->writeToAll(message);
 			std::cout << std::endl;
-			time_t result = time(NULL);
-			char str[26];
-			ctime_s(str, sizeof str, &result);
-			std::cout << chat->getActiveUser()->getName() << std::setw(35) << str << std::setw(30)
+			std::time_t now = std::time(nullptr);
+			std::cout << chat->getActiveUser()->getName() << std::setw(35) << std::asctime(std::localtime(&now)) << std::setw(30)
 				<< "--->" << std::setw(30)
 				<< "All" << std::endl << std::endl << std::setw(15) << "\" " << message << " \""
 				<< std::endl << std::endl;

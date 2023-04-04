@@ -7,10 +7,8 @@ Message::Message(const std::string& text, const std::string& sender, const std::
 	_sender(sender),
 	_recipient(recipient)
 {
-	time_t result = std::time(NULL);
-	char str[26];
-	ctime_s(str, sizeof str, &result);
-	_time = str;
+	std::time_t now = std::time(nullptr);
+	_time = std::asctime(std::localtime(&now));
 }
 
 std::string Message::getText()
