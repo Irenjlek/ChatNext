@@ -75,6 +75,8 @@ bool selectAction(std::shared_ptr<Chat> chat) {
 			}
 			case 'Q':
 				std::cout << "Good luck, bye!" << std::endl;
+
+				std::cout << chat->saveToFile("temp.txt");
 				return false;
 			default:
 				std::cout << "Enter L, R or Q" << std::endl;
@@ -164,10 +166,13 @@ int main() {
 
 	std::cout << "Hello! Let's start!" << std::endl;
 
+	std::queue <std::shared_ptr <User>> users = User::readFromFile("temp.txt");
+	while (!users.empty()) {
+		chat->addUser(users.front());
+		users.pop();
+	}
+
 	if (!selectAction(chat))
 		return 0;	
-		
-	std::cout << "Done!" << std::endl;
-
 	return 0;
 }

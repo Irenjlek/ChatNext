@@ -9,6 +9,15 @@ Message::Message(const std::string& text, const std::string& sender, const std::
 {
 	std::time_t now = std::time(nullptr);
 	_time = std::asctime(std::localtime(&now));
+	_time.erase(_time.size() - 1);
+}
+
+Message::Message(const std::string& text, const std::string& sender, const std::string& recipient, const std::string time) :
+	_text(text),
+	_sender(sender),
+	_recipient(recipient),
+	_time(time)
+{
 }
 
 std::string Message::getText()
@@ -32,8 +41,7 @@ std::string Message::getTime()
 }
 
 std::ostream& operator<<(std::ostream& stream, Message& message)
-{
-	
+{	
 	stream << message.getSender() << std::setw(35) << message.getTime() <<std::setw(30) << "--->" << std::setw(30)
 		<< message.getRecipient() << std::endl << std::endl << std::setw(20) << "\" " << message.getText() << " \""
 		<< std::endl << std::endl;

@@ -3,8 +3,6 @@
 #include <string>
 #include <iomanip>
 
-
-
 class Message
 {
 private:
@@ -15,6 +13,7 @@ private:
 
 public:
 	Message(const std::string& text, const std::string& sender, const std::string& recipient);
+	Message(const std::string& text, const std::string& sender, const std::string& recipient, const std::string time);
 
 	std::string getText();
 	std::string getSender();

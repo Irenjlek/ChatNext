@@ -11,7 +11,7 @@
 
 class Chat
 {
-private:
+private:	
 	std::map<int, std::shared_ptr <User>> _users;
 	int _users_count;
 	std::shared_ptr <User> _activeUser;
@@ -20,7 +20,8 @@ public:
 	Chat();
 	~Chat();
 
-	bool createNewUser(const std::string& name, const std::string& login, const std::string& password);
+	void createNewUser(const std::string& name, const std::string& login, const std::string& password);
+	void addUser(const std::shared_ptr<User>& user);
 	void setActiveUser(const std::shared_ptr<User>& user);
 	void login(std::string login, std::string password);
 	void write(std::string text, std::shared_ptr<User>);
@@ -35,4 +36,5 @@ public:
 	std::string getNameByLogin(const std::string login);
 	std::string getLoginByName(const std::string name);
 	bool isontheList(const std::string name);
+	bool saveToFile(std::string fileName);
 };

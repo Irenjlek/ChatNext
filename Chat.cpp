@@ -15,17 +15,20 @@ Chat::~Chat()
 
 }
 
-bool Chat::createNewUser(const std::string& name, const std::string& login, const std::string& password)
+void Chat::createNewUser(const std::string& name, const std::string& login, const std::string& password)
 {
 	if (isLoginExist(login)) {
 		std::cout << "User with login " << login << " is already exists." << std::endl;
-		return false;
+		return;
 	}		
 	std::shared_ptr <User> newUser = std::make_shared <User>(name, login, password);
-	_users.insert(std::make_pair(_users_count++, newUser));
+	addUser(newUser);
 	setActiveUser(newUser);
+}
 
-	return true;
+void Chat::addUser(const std::shared_ptr<User>& user)
+{
+	_users.insert(std::make_pair(_users_count++, user));
 }
 
 void Chat::setActiveUser(const std::shared_ptr<User>& user)
@@ -51,7 +54,6 @@ void Chat::login(std::string login, std::string password)
 		}
 	}
 }
-
 
 void Chat::write(std::string text, std::shared_ptr<User> recipient)
 {
@@ -182,5 +184,20 @@ bool Chat::isontheList(const std::string name)
 	}
 	std::cout << "bad recipient, try again!\n";
 	return false;
+}
+
+bool Chat::saveToFile(std::string fileName)
+{
+	std::ofstream file_writer = std::ofstream(fileName);
+	if (!file_writer.is_open()) {
+		std::cout << "Could not open file " << fileName << " !" << '\n';
+		return false;
+	}
+
+	for (std::map<int, std::shared_ptr<User>>::iterator it = _users.begin(); it != _users.end(); ++it) {
+		if (!it->second->writeToFile(fileName)) 
+			return false;
+	}		
+	return true;
 }
 
