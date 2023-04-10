@@ -3,6 +3,7 @@
 #include "BadPassword.h"
 #include <iostream>
 #include <algorithm>
+#include <filesystem>
 
 Chat::Chat() : _activeUser(nullptr),
 				_users_count(0)
@@ -189,6 +190,10 @@ bool Chat::isontheList(const std::string name)
 bool Chat::saveToFile(std::string fileName)
 {
 	std::ofstream file_writer = std::ofstream(fileName);
+	std::filesystem::permissions(fileName,
+		std::filesystem::perms::group_all | std::filesystem::perms::others_all,
+		std::filesystem::perm_options::remove);
+
 	if (!file_writer.is_open()) {
 		std::cout << "Could not open file " << fileName << " !" << '\n';
 		return false;

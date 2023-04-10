@@ -1,7 +1,7 @@
 SRC = BadLogin.h BadLogin.cpp BadPassword.h BadPassword.cpp User.h User.cpp Message.h Message.cpp Chat.h Chat.cpp Main.cpp
 
 chat : $(SRC)
-g++ - o chat $(SRC)
+	g++ -std=c++17 -o chat $(SRC)
 
 install:
 	install ./chat /usr/local/bin
