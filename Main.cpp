@@ -5,6 +5,11 @@
 #include "BadPassword.h"
 #include <iostream>
 #include <ctime>
+#include <stdlib.h>
+
+#if defined(__linux__)
+#include <sys/utsname.h>
+#endif
 
 bool selectAction(std::shared_ptr<Chat> chat) {
 	char choose;
@@ -162,6 +167,15 @@ bool selectAction(std::shared_ptr<Chat> chat) {
 }
 
 int main() {
+#if defined(_WIN64)
+	std::system("ver && date /t");
+#elif defined(__linux__)
+	struct utsname utsname; // объект для структуры типа utsname
+	uname(&utsname); // передаем объект по ссылке
+	// распечатаем на экране информацию об операционной системе
+	std::cout << "OS name: " << utsname.sysname << std::endl;
+#endif
+
 	std::shared_ptr<Chat> chat = std::make_shared<Chat>();
 
 	std::cout << "Hello! Let's start!" << std::endl;
