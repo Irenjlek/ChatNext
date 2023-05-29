@@ -12,6 +12,8 @@
 #endif
 
 bool selectAction(std::shared_ptr<Chat> chat) {
+        if (!chat->initClientServerMode())
+            std::cout << "Attention! There is no connection!" << std::endl;
 	char choose;
 	while (true)
 	{
@@ -81,7 +83,7 @@ bool selectAction(std::shared_ptr<Chat> chat) {
 			case 'Q':
 				std::cout << "Good luck, bye!" << std::endl;
 
-				std::cout << chat->saveToFile("temp.txt");
+                                std::cout << chat->saveToFile("temp.txt");
 				return false;
 			default:
 				std::cout << "Enter L, R or Q" << std::endl;
@@ -129,7 +131,7 @@ bool selectAction(std::shared_ptr<Chat> chat) {
 			std::getline(std::cin, message);
 			std::cout << std::endl;
 
-			chat->write(message, chat->getUser(log_recipient));
+                        chat->writeToOne(message, chat->getUser(log_recipient));
 			std::time_t now = std::time(nullptr);
 			std::cout << chat->getActiveUser()->getName() << std::setw(35) << std::asctime(std::localtime(&now)) << std::setw(30)
 				<< "--->" << std::setw(30)

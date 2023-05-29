@@ -20,7 +20,7 @@ public:
 	const std::string& getLogin() { return _login; }
 	std::string& getPassword() { return _password; }
 	friend std::ostream& operator << (std::ostream&, const User&);
-	void addMessage(std::shared_ptr <Message> msg);
+    void addMessage(std::shared_ptr <Message> msg);
 	void showUnreadedMessages();
 	bool writeToFile(std::string fileName);
 	static std::queue<std::shared_ptr <User>> readFromFile(std::string fileName);

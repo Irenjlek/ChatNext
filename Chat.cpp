@@ -4,16 +4,22 @@
 #include <iostream>
 #include <algorithm>
 #include <filesystem>
+#include <string.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+
+#define MESSAGE_LENGTH 1024
+#define PORT 7777
 
 Chat::Chat() : _activeUser(nullptr),
 				_users_count(0)
 {
-
 }
 
 Chat::~Chat()
 {
-
+    close(client_socket_file_descriptor);
 }
 
 void Chat::createNewUser(const std::string& name, const std::string& login, const std::string& password)
@@ -56,11 +62,28 @@ void Chat::login(std::string login, std::string password)
 	}
 }
 
-void Chat::write(std::string text, std::shared_ptr<User> recipient)
+void Chat::writeToOne(std::string text, std::shared_ptr<User> recipient)
 {
 	std::shared_ptr <Message> shp_mess = std::make_shared<Message>(text, getActiveUser()->getLogin(),
 		                                           recipient->getLogin());
-	recipient->addMessage(shp_mess);
+        recipient->addMessage(shp_mess);
+
+        if (_connected) {
+            char message[MESSAGE_LENGTH];
+            // Взаимодействие с сервером
+            bzero(message, sizeof(message));
+            std::string textWithUsers = getActiveUser()->getLogin();
+            textWithUsers.append("\n");
+            textWithUsers.append(recipient->getLogin());
+            textWithUsers.append("\n");
+            textWithUsers.append(text);
+            strcpy(message, textWithUsers.c_str());
+            ssize_t bytes = write(client_socket_file_descriptor, message, sizeof(message));
+            // Если передали >= 0  байт, значит пересылка прошла успешно
+            if(bytes >= 0){
+                std::cout << "Data send to the server successfully.!" << std::endl;
+            }
+        }
 }
 
 void Chat::writeToAll(const std::string text)
@@ -68,10 +91,8 @@ void Chat::writeToAll(const std::string text)
 	for (std::map<int, std::shared_ptr<User>>::iterator it = _users.begin(); it != _users.end(); ++it)
 	{
 		if (it->second->getLogin() != getActiveUser()->getLogin())
-		{
-			std::shared_ptr <Message> shp_mess = std::make_shared<Message>(text, getActiveUser()->getLogin(),
-				                                         it->second->getLogin());
-			it->second->addMessage(shp_mess);
+                {
+                        writeToOne(text, it->second);
 		}
 	}
 }
@@ -184,25 +205,138 @@ bool Chat::isontheList(const std::string name)
 			return true;
 	}
 	std::cout << "bad recipient, try again!\n";
-	return false;
+        return false;
 }
 
 bool Chat::saveToFile(std::string fileName)
 {
-	std::ofstream file_writer = std::ofstream(fileName);
-	std::filesystem::permissions(fileName,
-		std::filesystem::perms::group_all | std::filesystem::perms::others_all,
-		std::filesystem::perm_options::remove);
+        std::ofstream file_writer = std::ofstream(fileName);
+        std::filesystem::permissions(fileName,
+                std::filesystem::perms::group_all | std::filesystem::perms::others_all,
+                std::filesystem::perm_options::remove);
 
-	if (!file_writer.is_open()) {
-		std::cout << "Could not open file " << fileName << " !" << '\n';
-		return false;
-	}
+        if (!file_writer.is_open()) {
+                std::cout << "Could not open file " << fileName << " !" << '\n';
+                return false;
+        }
 
-	for (std::map<int, std::shared_ptr<User>>::iterator it = _users.begin(); it != _users.end(); ++it) {
-		if (!it->second->writeToFile(fileName)) 
-			return false;
-	}		
-	return true;
+        for (std::map<int, std::shared_ptr<User>>::iterator it = _users.begin(); it != _users.end(); ++it) {
+                if (!it->second->writeToFile(fileName))
+                        return false;
+        }
+        return true;
 }
 
+bool Chat::initClientServerMode()
+{
+    std::cout << "Choose mode (1 - Server, 2 - Client)" << std::endl;
+    int mode = 0;
+    std::cin >> mode;
+
+    struct sockaddr_in serveraddress, client;
+    socklen_t length;
+    int port, connection, bind_status, connection_status;
+    std::string ip;
+
+    std::cout << "Enter IP" << std::endl;
+    std::cin >> ip;
+
+    std::cout << "Enter port" << std::endl;
+    std::cin >> port;
+
+    // Установим адрес сервера
+    serveraddress.sin_addr.s_addr = inet_addr(ip.c_str());
+    // Зададим номер порта
+    serveraddress.sin_port = htons(port);
+    // Используем IPv4
+    serveraddress.sin_family = AF_INET;
+
+    if (mode == 1) {//server
+        _connected = initServer(serveraddress);
+    } else {//client
+        _connected = initClient(serveraddress);
+    }
+    return _connected;
+}
+
+bool Chat::initClient(sockaddr_in serveraddress)
+{
+    int connection;
+    // Создадим сокет
+    client_socket_file_descriptor = socket(AF_INET, SOCK_STREAM, 0);
+    if(client_socket_file_descriptor == -1){
+        std::cout << "Creation of Socket failed!" << std::endl;
+        return 0;
+    }
+
+    // Установим соединение с сервером
+    connection = connect(client_socket_file_descriptor, (struct sockaddr*)&serveraddress, sizeof(serveraddress));
+    if(connection == -1){
+        std::cout << "Connection with the server failed.!" << std::endl;
+        return 0;
+    }
+    return 1;
+}
+
+bool Chat::initServer(sockaddr_in serveraddress)
+{
+    char message[MESSAGE_LENGTH];
+    struct sockaddr_in client;
+    socklen_t length;
+    int connection, bind_status, connection_status;
+    // Создадим сокет
+    server_socket_file_descriptor = socket(AF_INET, SOCK_STREAM, 0);
+    if(server_socket_file_descriptor == -1){
+        std::cout << "Socket creation failed.!" << std::endl;
+        return 0;
+    }
+    // Привяжем сокет
+    bind_status = bind(server_socket_file_descriptor, (struct sockaddr*)&serveraddress,
+    sizeof(serveraddress));
+    if(bind_status == -1)  {
+        std::cout << "Socket binding failed.!" << std::endl;
+        return 0;
+    }
+    // Поставим сервер на прием данных
+    connection_status = listen(server_socket_file_descriptor, 5);
+    if(connection_status == -1){
+    std::cout << "Socket is unable to listen for new connections.!" << std::endl;
+   return 0;
+    }  else  {
+            std::cout << "Server is listening for new connection: " << std::endl;
+        }
+    length = sizeof(client);
+    connection = accept(server_socket_file_descriptor,(struct sockaddr*)&client, &length);
+    if(connection == -1)  {
+        std::cout << "Server is unable to accept the data from client.!" << std::endl;
+        return 0;
+    }
+
+    // Communication Establishment
+    while(1){
+        bzero(message, MESSAGE_LENGTH);
+        read(connection, message, sizeof(message));
+        parseMessage(message);
+        std::cout << "Server received a new message. Would you like exit and read it?" << std::endl;
+        std::string ansver;
+        std::cin >> ansver;
+        if (ansver == "y" || ansver == "yes")
+            break;
+    }
+
+    return 1;
+}
+
+void Chat::parseMessage(std::string message)
+{
+    std::string sender = message.substr(0, message.find('\n'));
+    message = message.erase(0, message.find('\n')+1);
+    std::string recipient = message.substr(0, message.find('\n'));
+    std::string text = message.erase(0, message.find('\n')+1);
+    if (isontheList(recipient) && isontheList(sender))
+        getUser(recipient)->addMessage(std::make_shared<Message>(text, sender, recipient));
+    else {
+        std::cout << "Data received from client: " <<  message << std::endl;
+        std::cout << "But sender or recipient is not exist." << std::endl;
+    }
+}

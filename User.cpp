@@ -1,6 +1,7 @@
 #include "User.h"
 #include <iostream>
 #include <fstream>
+#include <string.h>
 
 User::User() = default;
 
@@ -9,7 +10,7 @@ User::User(const std::string& name, const std::string& login, const std::string&
 
 void User::addMessage(std::shared_ptr<Message> msg)
 {
-	_messages.push(msg);
+    _messages.push(msg);
 }
 
 void User::showUnreadedMessages()
@@ -86,7 +87,7 @@ std::queue <std::shared_ptr <User>> User::readFromFile(std::string fileName)
 		if (countMsg > 0) {
 			for (int i = 0; i < countMsg; i++) {
 				std::shared_ptr <Message> shp_mess = std::make_shared<Message>(strings.at(start++), strings.at(start++), strings.at(start++), strings.at(start++));
-				newUser->addMessage(shp_mess);
+                                newUser->addMessage(shp_mess);
 			}			
 		}
 		users.push(newUser);
