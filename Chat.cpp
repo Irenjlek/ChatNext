@@ -5,9 +5,11 @@
 #include <algorithm>
 #include <filesystem>
 #include <string.h>
+#if defined(__linux__)
 #include <unistd.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#endif
 
 #define MESSAGE_LENGTH 1024
 #define PORT 7777
@@ -19,7 +21,9 @@ Chat::Chat() : _activeUser(nullptr),
 
 Chat::~Chat()
 {
+#if defined(__linux__)
     close(client_socket_file_descriptor);
+#endif
 }
 
 void Chat::createNewUser(const std::string& name, const std::string& login, const std::string& password)
@@ -68,6 +72,7 @@ void Chat::writeToOne(std::string text, std::shared_ptr<User> recipient)
 		                                           recipient->getLogin());
         recipient->addMessage(shp_mess);
 
+#if defined(__linux__)
         if (_connected) {
             char message[MESSAGE_LENGTH];
             // Взаимодействие с сервером
@@ -84,6 +89,7 @@ void Chat::writeToOne(std::string text, std::shared_ptr<User> recipient)
                 std::cout << "Data send to the server successfully.!" << std::endl;
             }
         }
+#endif
 }
 
 void Chat::writeToAll(const std::string text)
@@ -227,6 +233,7 @@ bool Chat::saveToFile(std::string fileName)
         return true;
 }
 
+#if defined(__linux__)
 bool Chat::initClientServerMode()
 {
     std::cout << "Choose mode (1 - Server, 2 - Client)" << std::endl;
@@ -340,3 +347,4 @@ void Chat::parseMessage(std::string message)
         std::cout << "But sender or recipient is not exist." << std::endl;
     }
 }
+#endif

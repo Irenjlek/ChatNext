@@ -12,8 +12,10 @@
 #endif
 
 bool selectAction(std::shared_ptr<Chat> chat) {
+#if defined(__linux__)
         if (!chat->initClientServerMode())
             std::cout << "Attention! There is no connection!" << std::endl;
+#endif
 	char choose;
 	while (true)
 	{

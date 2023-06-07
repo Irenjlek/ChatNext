@@ -8,7 +8,9 @@
 #include <iomanip>
 #include <typeinfo>
 #include <map>
+#if defined(__linux__)
 #include <arpa/inet.h>
+#endif
 
 class Chat
 {
@@ -19,9 +21,11 @@ private:
     int client_socket_file_descriptor, server_socket_file_descriptor;
     bool _connected;
 
+#if defined(__linux__)
     bool initClient(sockaddr_in serveraddress);
     bool initServer(sockaddr_in serveraddress);
     void parseMessage(std::string message);
+#endif
 
 public:
 	Chat();
@@ -44,5 +48,7 @@ public:
 	std::string getLoginByName(const std::string name);
 	bool isontheList(const std::string name);
     bool saveToFile(std::string fileName);
+#if defined(__linux__)
     bool initClientServerMode();
+#endif
 };
