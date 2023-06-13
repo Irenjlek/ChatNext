@@ -6,6 +6,7 @@
 class Message
 {
 private:
+	std::string _dbID;
 	std::string _text;
 	std::string _sender;
 	std::string _recipient;
@@ -13,8 +14,10 @@ private:
 
 public:
 	Message(const std::string& text, const std::string& sender, const std::string& recipient);
-	Message(const std::string& text, const std::string& sender, const std::string& recipient, const std::string time);
+	Message(const std::string& dbID, const std::string& text, const std::string& sender, const std::string& recipient);
+	Message(const std::string& dbID, const std::string& text, const std::string& sender, const std::string& recipient, const std::string time);
 
+	std::string getDbID();
 	std::string getText();
 	std::string getSender();
 	std::string getRecipient();

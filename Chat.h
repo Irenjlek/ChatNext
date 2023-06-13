@@ -3,14 +3,16 @@
 #include <string>
 #include <memory>
 #include <iostream>
-#include "User.h"
-#include "Message.h"
 #include <iomanip>
 #include <typeinfo>
 #include <map>
 #if defined(__linux__)
 #include <arpa/inet.h>
 #endif
+
+#include "User.h"
+#include "Message.h"
+#include "DataBase.h"
 
 class Chat
 {
@@ -20,6 +22,7 @@ private:
 	std::shared_ptr <User> _activeUser;
     int client_socket_file_descriptor, server_socket_file_descriptor;
     bool _connected;
+	std::shared_ptr<DataBase> _database;
 
 #if defined(__linux__)
     bool initClient(sockaddr_in serveraddress);
@@ -27,12 +30,13 @@ private:
     void parseMessage(std::string message);
 #endif
 
+	void addUser(const std::shared_ptr<User>& user);
+
 public:
 	Chat();
 	~Chat();
 
 	void createNewUser(const std::string& name, const std::string& login, const std::string& password);
-	void addUser(const std::shared_ptr<User>& user);
 	void setActiveUser(const std::shared_ptr<User>& user);
 	void login(std::string login, std::string password);
     void writeToOne(std::string text, std::shared_ptr<User>);
@@ -47,8 +51,10 @@ public:
 	std::string getNameByLogin(const std::string login);
 	std::string getLoginByName(const std::string name);
 	bool isontheList(const std::string name);
-    bool saveToFile(std::string fileName);
 #if defined(__linux__)
     bool initClientServerMode();
 #endif
+	bool createDBConnection();
+	void getUsersFromDB();
+	void updateUnreadedMessages();
 };

@@ -56,6 +56,7 @@ bool selectAction(std::shared_ptr<Chat> chat) {
 					chat->login(login, password);
 					std::cout << std::endl;
 					chat->getActiveUser()->showUnreadedMessages();
+					chat->updateUnreadedMessages();
 					std::cout << std::endl;
 				}
 				catch (BadLogin& e) {
@@ -72,6 +73,7 @@ bool selectAction(std::shared_ptr<Chat> chat) {
 							chat->login(login, password);
 							std::cout << std::endl;
 							chat->getActiveUser()->showUnreadedMessages();
+							chat->updateUnreadedMessages();
 							std::cout << std::endl;
 						}
 						catch (BadPassword& err) {
@@ -84,8 +86,6 @@ bool selectAction(std::shared_ptr<Chat> chat) {
 			}
 			case 'Q':
 				std::cout << "Good luck, bye!" << std::endl;
-
-                                std::cout << chat->saveToFile("temp.txt");
 				return false;
 			default:
 				std::cout << "Enter L, R or Q" << std::endl;
@@ -180,15 +180,13 @@ int main() {
 	std::cout << "OS name: " << utsname.sysname << std::endl;
 #endif
 
-	std::shared_ptr<Chat> chat = std::make_shared<Chat>();
-
 	std::cout << "Hello! Let's start!" << std::endl;
 
-	std::queue <std::shared_ptr <User>> users = User::readFromFile("temp.txt");
-	while (!users.empty()) {
-		chat->addUser(users.front());
-		users.pop();
-	}
+	std::shared_ptr<Chat> chat = std::make_shared<Chat>();
+	if (!chat->createDBConnection())
+		std::cout << "DB connection is absent, users info is unavailable." << std::endl;
+
+	chat->getUsersFromDB();
 
 	if (!selectAction(chat))
 		return 0;	

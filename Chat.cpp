@@ -12,18 +12,16 @@
 #endif
 
 #define MESSAGE_LENGTH 1024
-#define PORT 7777
 
 Chat::Chat() : _activeUser(nullptr),
-				_users_count(0)
+				_users_count(0),
+    _connected(false),
+    _database(std::make_shared <DataBase>())
 {
 }
 
 Chat::~Chat()
 {
-#if defined(__linux__)
-    close(client_socket_file_descriptor);
-#endif
 }
 
 void Chat::createNewUser(const std::string& name, const std::string& login, const std::string& password)
@@ -35,11 +33,21 @@ void Chat::createNewUser(const std::string& name, const std::string& login, cons
 	std::shared_ptr <User> newUser = std::make_shared <User>(name, login, password);
 	addUser(newUser);
 	setActiveUser(newUser);
+    std::string query = "INSERT into users (name, login, password) VALUES ('" + name + "', '" + login + "', '" + password + "');";
+    _database->executeQueryWithoutResult(query);
 }
 
 void Chat::addUser(const std::shared_ptr<User>& user)
 {
 	_users.insert(std::make_pair(_users_count++, user));
+}
+
+void Chat::updateUnreadedMessages()
+{
+    std::string query = "SELECT id FROM users WHERE login LIKE '" + getActiveUser()->getLogin() + "';";
+    std::vector<std::string> list = _database->queryResult(query);
+    query = "UPDATE messages SET status = 'readed' WHERE status LIKE 'received' AND id_receiver = " + list.at(0) + ";";
+    _database->executeQueryWithoutResult(query);
 }
 
 void Chat::setActiveUser(const std::shared_ptr<User>& user)
@@ -71,18 +79,34 @@ void Chat::writeToOne(std::string text, std::shared_ptr<User> recipient)
 	std::shared_ptr <Message> shp_mess = std::make_shared<Message>(text, getActiveUser()->getLogin(),
 		                                           recipient->getLogin());
         recipient->addMessage(shp_mess);
+        
+        std::string query = "SELECT id FROM users WHERE login LIKE '" + getActiveUser()->getLogin() + "';";
+        std::vector<std::string> ids = _database->queryResult(query);
+        std::string id_sender = ids.at(0);
+
+        query = "SELECT id FROM users WHERE login LIKE '" + recipient->getLogin() + "';";
+        ids = _database->queryResult(query);
+        std::string id_recipient = ids.at(0);
+
+        query = "INSERT INTO messages (id_sender, id_receiver, text, status) " 
+            "VALUES (" + id_sender + ", " + id_recipient + ", '" + text + "', 'sended');";
+        _database->executeQueryWithoutResult(query);
+
+        query = "SELECT id FROM messages WHERE id_sender = " + id_sender + " AND id_receiver = " + id_recipient + " AND text LIKE '" + text + "';";
+        ids = _database->queryResult(query);
+        std::string id_message = ids.at(0);
 
 #if defined(__linux__)
         if (_connected) {
             char message[MESSAGE_LENGTH];
             // Взаимодействие с сервером
             bzero(message, sizeof(message));
-            std::string textWithUsers = getActiveUser()->getLogin();
-            textWithUsers.append("\n");
-            textWithUsers.append(recipient->getLogin());
-            textWithUsers.append("\n");
-            textWithUsers.append(text);
-            strcpy(message, textWithUsers.c_str());
+            //std::string textWithUsers = getActiveUser()->getLogin();
+            //textWithUsers.append("\n");
+            //textWithUsers.append(recipient->getLogin());
+            //textWithUsers.append("\n");
+            //textWithUsers.append(text);
+            strcpy(message, id_message.c_str());
             ssize_t bytes = write(client_socket_file_descriptor, message, sizeof(message));
             // Если передали >= 0  байт, значит пересылка прошла успешно
             if(bytes >= 0){
@@ -214,24 +238,6 @@ bool Chat::isontheList(const std::string name)
         return false;
 }
 
-bool Chat::saveToFile(std::string fileName)
-{
-        std::ofstream file_writer = std::ofstream(fileName);
-        std::filesystem::permissions(fileName,
-                std::filesystem::perms::group_all | std::filesystem::perms::others_all,
-                std::filesystem::perm_options::remove);
-
-        if (!file_writer.is_open()) {
-                std::cout << "Could not open file " << fileName << " !" << '\n';
-                return false;
-        }
-
-        for (std::map<int, std::shared_ptr<User>>::iterator it = _users.begin(); it != _users.end(); ++it) {
-                if (!it->second->writeToFile(fileName))
-                        return false;
-        }
-        return true;
-}
 
 #if defined(__linux__)
 bool Chat::initClientServerMode()
@@ -323,7 +329,13 @@ bool Chat::initServer(sockaddr_in serveraddress)
     while(1){
         bzero(message, MESSAGE_LENGTH);
         read(connection, message, sizeof(message));
-        parseMessage(message);
+        //parseMessage(message);
+
+        std::string m = message;
+        std::cout << "Data received from client: " << message << std::endl;
+        std::string query = "UPDATE messages SET status = 'received' WHERE id = " + m + ";";
+        _database->executeQueryWithoutResult(query);
+
         std::cout << "Server received a new message. Would you like exit and read it?" << std::endl;
         std::string ansver;
         std::cin >> ansver;
@@ -348,3 +360,57 @@ void Chat::parseMessage(std::string message)
     }
 }
 #endif
+
+bool Chat::createDBConnection()
+{
+    unsigned int port = 0;
+    std::string ip, namedb, user, password;
+
+    std::cout << "Enter data for database connection:" << std::endl << "IP:" << std::endl;
+    std::cin >> ip;
+
+    std::cout << "Port:" << std::endl;
+    std::cin >> port;
+
+    std::cout << "Database name:" << std::endl;
+    std::cin >> namedb;
+
+    std::cout << "User:" << std::endl;
+    std::cin >> user;
+
+    std::cout << "Password:" << std::endl;
+    std::cin >> password;
+
+    return _database->connect(ip, port, namedb, user, password);
+}
+
+void Chat::getUsersFromDB()
+{
+    if (!_database->hasConnection()) {
+        return;
+    }
+    std::string name, login, password;
+    std::vector<std::string> userslist = _database->queryResult("SELECT id, name, login, password FROM users;");
+
+    int start = 0, messagesStart = 0;
+    std::shared_ptr <User> newUser;
+    std::shared_ptr <Message> newMessage;
+
+    while (start < userslist.size()) {
+        newUser = std::make_shared <User>(userslist.at(start+1), userslist.at(start+2), userslist.at(start+3));
+        std::string text = "SELECT messages.id, text, name, date FROM messages join users on id_sender = users.id where id_receiver = " +
+            userslist.at(start) + " AND status LIKE 'received'";
+
+        std::vector<std::string> messages = _database->queryResult(text);
+        messagesStart = 0;
+        while (messagesStart < messages.size()) {
+            newMessage = std::make_shared <Message>(messages.at(messagesStart), messages.at(messagesStart + 1), messages.at(messagesStart + 2),
+                newUser->getLogin(), messages.at(messagesStart + 3));
+            newUser->addMessage(newMessage);
+            messagesStart += 4;
+        }
+
+        addUser(newUser);
+        start += 4;
+    }
+}
