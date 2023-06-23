@@ -13,6 +13,7 @@
 #include "User.h"
 #include "Message.h"
 #include "DataBase.h"
+#include "Logger.h"
 
 class Chat
 {
@@ -23,6 +24,7 @@ private:
     int client_socket_file_descriptor, server_socket_file_descriptor;
     bool _connected;
 	std::shared_ptr<DataBase> _database;
+	Logger * _logger;
 
 #if defined(__linux__)
     bool initClient(sockaddr_in serveraddress);

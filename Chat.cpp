@@ -1,6 +1,7 @@
 #include "Chat.h"
 #include "BadLogin.h"
 #include "BadPassword.h"
+#include "Logger.h"
 #include <iostream>
 #include <algorithm>
 #include <filesystem>
@@ -16,7 +17,8 @@
 Chat::Chat() : _activeUser(nullptr),
 				_users_count(0),
     _connected(false),
-    _database(std::make_shared <DataBase>())
+    _database(std::make_shared <DataBase>()),
+    _logger(new Logger("log.txt"))
 {
 }
 
@@ -30,11 +32,14 @@ void Chat::createNewUser(const std::string& name, const std::string& login, cons
 		std::cout << "User with login " << login << " is already exists." << std::endl;
 		return;
 	}		
-	std::shared_ptr <User> newUser = std::make_shared <User>(name, login, password);
-	addUser(newUser);
-	setActiveUser(newUser);
-    std::string query = "INSERT into users (name, login, password) VALUES ('" + name + "', '" + login + "', '" + password + "');";
-    _database->executeQueryWithoutResult(query);
+    std::shared_ptr <User> newUser = std::make_shared <User>(name, login, password);
+    addUser(newUser);
+    setActiveUser(newUser);
+    if (_database->hasConnection()) {
+        std::string query = "INSERT into users (name, login, password) VALUES ('" + name + "', '" + login + "', '" + password + "');";
+        _database->executeQueryWithoutResult(query);
+    }
+	
 }
 
 void Chat::addUser(const std::shared_ptr<User>& user)
@@ -44,10 +49,12 @@ void Chat::addUser(const std::shared_ptr<User>& user)
 
 void Chat::updateUnreadedMessages()
 {
-    std::string query = "SELECT id FROM users WHERE login LIKE '" + getActiveUser()->getLogin() + "';";
-    std::vector<std::string> list = _database->queryResult(query);
-    query = "UPDATE messages SET status = 'readed' WHERE status LIKE 'received' AND id_receiver = " + list.at(0) + ";";
-    _database->executeQueryWithoutResult(query);
+    if (_database->hasConnection()) {
+        std::string query = "SELECT id FROM users WHERE login LIKE '" + getActiveUser()->getLogin() + "';";
+        std::vector<std::string> list = _database->queryResult(query);
+        query = "UPDATE messages SET status = 'readed' WHERE status LIKE 'received' AND id_receiver = " + list.at(0) + ";";
+        _database->executeQueryWithoutResult(query);
+    }
 }
 
 void Chat::setActiveUser(const std::shared_ptr<User>& user)
@@ -79,22 +86,27 @@ void Chat::writeToOne(std::string text, std::shared_ptr<User> recipient)
 	std::shared_ptr <Message> shp_mess = std::make_shared<Message>(text, getActiveUser()->getLogin(),
 		                                           recipient->getLogin());
         recipient->addMessage(shp_mess);
+        if (_database->hasConnection()) {
+            std::string query = "SELECT id FROM users WHERE login LIKE '" + getActiveUser()->getLogin() + "';";
+            std::vector<std::string> ids = _database->queryResult(query);
+            std::string id_sender = ids.at(0);
+
+            query = "SELECT id FROM users WHERE login LIKE '" + recipient->getLogin() + "';";
+            ids = _database->queryResult(query);
+            std::string id_recipient = ids.at(0);
+
+            query = "INSERT INTO messages (id_sender, id_receiver, text, status) " 
+                "VALUES (" + id_sender + ", " + id_recipient + ", '" + text + "', 'sended');";
+            _database->executeQueryWithoutResult(query);
+
+            query = "SELECT id FROM messages WHERE id_sender = " + id_sender + " AND id_receiver = " + id_recipient + " AND text LIKE '" + text + "';";
+            ids = _database->queryResult(query);
+            std::string id_message = ids.at(0);
+        }
         
-        std::string query = "SELECT id FROM users WHERE login LIKE '" + getActiveUser()->getLogin() + "';";
-        std::vector<std::string> ids = _database->queryResult(query);
-        std::string id_sender = ids.at(0);
-
-        query = "SELECT id FROM users WHERE login LIKE '" + recipient->getLogin() + "';";
-        ids = _database->queryResult(query);
-        std::string id_recipient = ids.at(0);
-
-        query = "INSERT INTO messages (id_sender, id_receiver, text, status) " 
-            "VALUES (" + id_sender + ", " + id_recipient + ", '" + text + "', 'sended');";
-        _database->executeQueryWithoutResult(query);
-
-        query = "SELECT id FROM messages WHERE id_sender = " + id_sender + " AND id_receiver = " + id_recipient + " AND text LIKE '" + text + "';";
-        ids = _database->queryResult(query);
-        std::string id_message = ids.at(0);
+        std::string log = "From " + getActiveUser()->getLogin() + " to " + recipient->getLogin() + "; Time - " + shp_mess->getTime() +
+            "; Text - " + text + "\n";
+        _logger->writoToFile(log);
 
 #if defined(__linux__)
         if (_connected) {
