@@ -69,11 +69,11 @@ void Chat::login(std::string login, std::string password)
 	bool found = isLoginExist(login);
 	if (!found)
 		throw BadLogin();
-	for (std::map<int, std::shared_ptr<User>>::iterator it = _users.begin(); it != _users.end(); ++it)
+	for (auto& it : _users)
 	{
-		if (it->second->getLogin() == login) {
-			if (it->second->getPassword() == password) {
-				setActiveUser(it->second);
+		if (it.second->getLogin() == login) {
+			if (it.second->getPassword() == password) {
+				setActiveUser(it.second);
 			}
 			else
 				throw BadPassword();
@@ -130,20 +130,20 @@ void Chat::writeToOne(std::string text, std::shared_ptr<User> recipient)
 
 void Chat::writeToAll(const std::string text)
 {
-	for (std::map<int, std::shared_ptr<User>>::iterator it = _users.begin(); it != _users.end(); ++it)
+	for (auto& it : _users)
 	{
-		if (it->second->getLogin() != getActiveUser()->getLogin())
+		if (it.second->getLogin() != getActiveUser()->getLogin())
                 {
-                        writeToOne(text, it->second);
+                        writeToOne(text, it.second);
 		}
 	}
 }
 
 bool Chat::isLoginExist(const std::string& login)
 {
-	for (std::map<int, std::shared_ptr<User>>::iterator it = _users.begin(); it != _users.end(); ++it)
+	for (auto& it : _users)
 	{
-		if (it->second->getLogin() == login) 			
+		if (it.second->getLogin() == login) 			
 			return true;
 	}
 	return false;
@@ -161,9 +161,9 @@ void Chat::showMenuAddMessege()
 
 std::shared_ptr<User> Chat::getUser(const std::string login)
 {
-	for (std::map<int, std::shared_ptr<User>>::iterator it = _users.begin(); it != _users.end(); ++it)
-		if (it->second->getLogin() == login)				
-			return it->second;    
+	for (auto& it : _users)
+		if (it.second->getLogin() == login)				
+			return it.second;    
 		
 		return std::make_shared <User>();
 }
